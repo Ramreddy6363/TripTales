@@ -6,6 +6,7 @@ const app = express()
 // 1. middleware
 app.use(morgan('tiny'));
 app.use(express.json());
+app.use(express.static(`${__dirname}/public`))
 
 app.use((req, res, next) => {
   console.log('hello from the middleware');
