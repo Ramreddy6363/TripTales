@@ -5,7 +5,6 @@ const userRouter = require('./Routes/userRoutes');
 
 const app = express();
 // 1. middleware
-console.log(process.env.NODE_ENV);
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
@@ -37,7 +36,6 @@ app.use((req, res, next) => {
 // app.delete('api/v1/tours/:id', DeleteTour);
 
 // 3. Routes
-
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 
