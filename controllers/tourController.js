@@ -116,3 +116,104 @@ exports.DeleteTour = async (req, res) => {
     });
   }
 };
+
+exports.getTourStats = async (req, res) => {
+  try {
+    const stats = await Tour.aggregate([
+      {
+        $match: { ratingsAverage: { $gte: 4.5 } },
+      },
+      {
+        $group: {
+          _id: { $toUpper: '$difficulty' },
+          numTours: { $sum: 1 },
+          numRatings: { $sum: '$ratingsQuantity' },
+          avgRating: { $avg: '$ratingsAverage' },
+          avgPrice: { $avg: '$price' },
+          minPrice: { $min: '$price' },
+          maxPrice: { $max: '$price' },
+        },
+      },
+      {
+        $sort: {
+          avgPrice: 1,
+        },
+      },
+      // {
+      //   $match: { _id: { $ne: 'EASY' } },
+      // },
+    ]);
+    res.status(200).json({
+      status: 'success',
+      data: { stats },
+    });
+  } catch (error) {
+    res.status(400).json({
+      status: 'fail',
+      message: 'Invalid data sent',
+    });
+  }
+};
+exports.getMonthlyPlan = async (req, res) => {
+  try {
+    const year = parseInt(req.params.year, 10);
+
+    const plan = await Tour.aggregate([
+      // Step 1: Unwind the array to get one document per start date
+      {
+        $unwind: '$startDates',
+      },
+
+      // Step 2: Match only dates in the requested year
+      {
+        $match: {
+          startDates: {
+            $gte: new Date(`${year}-01-01`),
+            $lte: new Date(`${year}-12-31`),
+          },
+        },
+      },
+
+      // Step 3: Group by month (ONLY ONE GROUP STAGE)
+      {
+        $group: {
+          _id: { $month: '$startDates' },
+          numTourStarts: { $sum: 1 },
+          tours: { $push: '$name' },
+        },
+      },
+
+      // Step 4: Add month field
+      {
+        $addFields: { month: '$_id' },
+      },
+
+      // Step 5: Project (remove _id)
+      {
+        $project: {
+          _id: 0,
+        },
+      },
+      // Step 6: Sort by number of tours (descending)
+      {
+        $sort: { numTourStarts: -1 },
+      },
+
+      // Step 7: Limit to top 6 months
+      {
+        $limit: 6,
+      },
+    ]);
+
+    res.status(200).json({
+      status: 'success',
+      results: plan.length,
+      data: { plan },
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: 'fail',
+      message: err.message,
+    });
+  }
+};
